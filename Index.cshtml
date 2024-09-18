@@ -1,0 +1,165 @@
+﻿@page
+@model IndexModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product CRUD with AJAX</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+<h2>Products</h2>
+<ul id="product-list"></ul>
+
+<h2>Create Product</h2>
+Name: <input type="text" id="name" /> <br>
+Price: <input type="number" id="price" /> <br>
+<button onclick="createProduct()">Create Product</button>
+
+<h2>Update Product</h2>
+ID: <input type="number" id="updateId" /> <br>
+Name: <input type="text" id="updateName" /> <br>
+Price: <input type="number" id="updatePrice" /> <br>
+<button onclick="updateProduct()">Update Product</button>
+
+<h2>Delete Product</h2>
+ID: <input type="number" id="deleteId" /> <br>
+<button onclick="deleteProduct()">Delete Product</button>
+
+<script>
+    function getAllProducts() {
+        $.ajax({
+            url: '/Index?handler=GetAll',
+            method: 'GET',
+            success: function (data) {
+                let productList = $('#product-list');
+                productList.empty();
+                data.forEach(product => {
+                    productList.append(`<li>${product.name} - ${product.price}</li>`);
+                });
+            },
+            error: function () {
+                alert('Error fetching products');
+            }
+        });
+    }
+
+    function createProduct() {
+        const name = $('#name').val();
+        const price = $('#price').val();
+
+        $.ajax({
+            url: '/Index?handler=Create',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name: name, price: parseFloat(price) }),
+            success: function () {
+                alert('Product created');
+                getAllProducts();
+            },
+            error: function () {
+                alert('Error creating product');
+            }
+        });
+    }
+
+    function updateProduct() {
+        const id = $('#updateId').val();
+        const name = $('#updateName').val();
+        const price = $('#updatePrice').val();
+
+        $.ajax({
+            url: `/Index?handler=Update&id=${id}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name: name, price: parseFloat(price) }),
+            success: function () {
+                alert('Product updated');
+                getAllProducts();
+            },
+            error: function () {
+                alert('Error updating product');
+            }
+        });
+    }
+
+    function deleteProduct() {
+        const id = $('#deleteId').val();
+
+        $.ajax({
+            url: `/Index?handler=Delete&id=${id}`,
+            method: 'DELETE',
+            success: function () {
+                alert('Product deleted');
+                getAllProducts();
+            },
+            error: function () {
+                alert('Error deleting product');
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        getAllProducts();
+    });
+</script>
+
+</body>
+</html>
+
+@code {
+    private static List<Product> Products = new List<Product>
+    {
+        new Product { Id = 1, Name = "Product 1", Price = 10 },
+        new Product { Id = 2, Name = "Product 2", Price = 20 },
+        new Product { Id = 3, Name = "Product 3", Price = 30 }
+    };
+
+    public IActionResult OnGetGetAll()
+    {
+        return new JsonResult(Products);
+    }
+
+    public IActionResult OnPostCreate([FromBody] Product newProduct)
+    {
+        newProduct.Id = Products.Max(p => p.Id) + 1;
+        Products.Add(newProduct);
+        return new JsonResult(newProduct);
+    }
+
+    public IActionResult OnPutUpdate(int id, [FromBody] Product updatedProduct)
+    {
+        var product = Products.FirstOrDefault(p => p.Id == id);
+        if (product == null)
+        {
+            return NotFound();
+        }
+        product.Name = updatedProduct.Name;
+        product.Price = updatedProduct.Price;
+        return new JsonResult(product);
+    }
+
+    public IActionResult OnDeleteDelete(int id)
+    {
+        var product = Products.FirstOrDefault(p => p.Id == id);
+        if (product == null)
+        {
+            return NotFound();
+        }
+        Products.Remove(product);
+        return NoContent();
+    }
+
+    public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+    }
+}
